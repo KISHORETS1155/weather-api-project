@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        /* Dynamic background based on weather */
+        body {
+            transition: background 0.5s ease;
+        }
+        .bg-clear { background: linear-gradient(to bottom, #87CEEB, #E0F6FF); }
+        .bg-clouds { background: linear-gradient(to bottom, #B0C4DE, #D3D3D3); }
+        .bg-rain { background: linear-gradient(to bottom, #4682B4, #708090); }
+        .bg-thunderstorm { background: linear-gradient(to bottom, #2F4F4F, #483D8B); }
+        .bg-snow { background: linear-gradient(to bottom, #E6E6FA, #F8F8FF); }
+        .bg-mist { background: linear-gradient(to bottom, #B0E0E6, #DCDCDC); }
+        .bg-default { background: linear-gradient(to bottom, #4B5EAA, #7F9CF5); }
+
+        /* Spinner animation */
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-default min-h-screen flex items-center justify-center p-4 transition-all">
+    <div class="max-w-3xl w-full bg-white bg-opacity-90 rounded-2xl shadow-2xl p-8">
+        <!-- Header -->
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Weather Explorer</h1>
+
+        <!-- Search Form -->
+        <div class="flex justify-center mb-8">
+            <div class="relative w-full max-w-md">
+                <input
+                    type="text"
+                    id="cityInput"
+                    placeholder="Enter city name"
+                    class="w-full p-4 pr-12 text-gray-700 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300"
+                    required
+                >
+                <button
+                    id="searchBtn"
+                    class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 transition-colors"
+                >
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="spinner" class="spinner"></div>
+
+        <!-- Error Message -->
+        <% if (error) { %>
+            <div id="error" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg mb-6 animate-pulse">
+                <p><%= error %></p>
+            </div>
+        <% } %>
+
+        <!-- Weather Card -->
+        <% if (weather) { %>
+            <div id="weatherCard" class="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+                <!-- Main Weather Info -->
+                <div class="bg-gradient-to-br from-blue-400 to-blue-600 text-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-semibold mb-2"><%= weather.city %></h2>
+                    <div class="flex items-center">
+                        <img
+                            src="http://openweathermap.org/img/wn/<%= weather.icon %>@2x.png"
+                            alt="<%= weather.description %>"
+                            class="w-16 h-16"
+                        >
+                        <p class="text-lg capitalize ml-4"><%= weather.description %></p>
+                    </div>
+                    <p class="text-4xl font-bold mt-4"><%= weather.temperature %> °C</p>
+                    <p class="text-sm">Feels Like: <%= weather.feels_like %> °C</p>
+
+                    <% if (weather.isDay) { %>
+                        <!-- Show sun icon or day background -->
+                        <div class="flex justify-center mt-4">
+                            <i class="fas fa-sun text-yellow-500 text-4xl"></i>
+                        </div>
+                    <% } else { %>
+                        <!-- Show moon icon or night background -->
+                        <div class="flex justify-center mt-4">
+                            <i class="fas fa-moon text-indigo-500 text-4xl"></i>
+                        </div>
+                    <% } %>
+                </div>
+
+                <!-- Additional Details -->
+                <div class="bg-gray-100 p-6 rounded-xl shadow-lg">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Details</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <p><i class="fas fa-tint mr-2 text-blue-500"></i>Humidity: <%= weather.humidity %>%</p>
+                        <p><i class="fas fa-wind mr-2 text-gray-500"></i>Wind: <%= weather.wind %> m/s</p>
+                        <p><i class="fas fa-tachometer-alt mr-2 text-purple-500"></i>Pressure: <%= weather.pressure %> hPa</p>
+                        <p><i class="fas fa-sun mr-2 text-yellow-500"></i>Sunrise: <%= weather.sunrise %></p>
+                        <p><i class="fas fa-moon mr-2 text-indigo-500"></i>Sunset: <%= weather.sunset %></p>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+    </div>
+
+    <script>
+        // Dynamic background based on weather condition
+        function setBackground(weatherMain, isDay) {
+            const body = document.body;
+            body.classList.remove('bg-clear', 'bg-clouds', 'bg-rain', 'bg-thunderstorm', 'bg-snow', 'bg-mist', 'bg-default');
+            if (!weatherMain) {
+                body.classList.add('bg-default');
+                return;
+            }
+            const main = weatherMain.toLowerCase();
+            if (main.includes('clear')) body.classList.add('bg-clear');
+            else if (main.includes('cloud')) body.classList.add('bg-clouds');
+            else if (main.includes('rain') || main.includes('drizzle')) body.classList.add('bg-rain');
+            else if (main.includes('thunderstorm')) body.classList.add('bg-thunderstorm');
+            else if (main.includes('snow')) body.classList.add('bg-snow');
+            else if (main.includes('mist') || main.includes('fog')) body.classList.add('bg-mist');
+            else body.classList.add('bg-default');
+            
+            // Adjust background based on day or night
+            if (isDay) {
+                body.style.backgroundColor = '#87CEEB'; // Daytime background color (light blue)
+            } else {
+                body.style.backgroundColor = '#2F4F4F'; // Nighttime background color (dark blue)
+            }
+        }
+
+        // Set initial background if weather data exists
+        <% if (weather) { %>
+            setBackground('<%= weather.main %>', <%= weather.isDay %>);
+        <% } %>
+
+        // Handle form submission with Fetch API
+        const searchBtn = document.getElementById('searchBtn');
+        const cityInput = document.getElementById('cityInput');
+        const spinner = document.getElementById('spinner');
+        const errorDiv = document.getElementById('error');
+        const weatherCard = document.getElementById('weatherCard');
+
+        searchBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const city = cityInput.value.trim();
+            if (!city) return;
+
+            // Show spinner, hide previous results
+            spinner.style.display = 'block';
+            if (errorDiv) errorDiv.remove();
+            if (weatherCard) weatherCard.remove();
+
+            try {
+                const response = await fetch('/weather', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ city })
+                });
+                const data = await response.json();
+
+                // Update UI
+                spinner.style.display = 'none';
+                if (data.error) {
+                    const errorHtml = `<div id="error" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg mb-6 animate-pulse">${data.error}</div>`;
+                    document.querySelector('.max-w-3xl').insertAdjacentHTML('beforeend', errorHtml);
+                    setBackground(null, false);
+                } else {
+                    const weatherHtml = `
+                        <div id="weatherCard" class="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+                            <div class="bg-gradient-to-br from-blue-400 to-blue-600 text-white p-6 rounded-xl shadow-lg">
+                                <h2 class="text-2xl font-semibold mb-2">${data.city}</h2>
+                                <div class="flex items-center">
+                                    <img src="http://openweathermap.org/img/wn/${data.icon}@2x.png" alt="${data.description}" class="w-16 h-16">
+                                    <p class="text-lg capitalize ml-4">${data.description}</p>
+                                </div>
+                                <p class="text-4xl font-bold mt-4">${data.temperature} °C</p>
+                                <p class="text-sm">Feels Like: ${data.feels_like} °C</p>
+                                ${data.isDay ? 
+                                    `<div class="flex justify-center mt-4"><i class="fas fa-sun text-yellow-500 text-4xl"></i></div>` :
+                                    `<div class="flex justify-center mt-4"><i class="fas fa-moon text-indigo-500 text-4xl"></i></div>`
+                                }
+                            </div>
+                            <div class="bg-gray-100 p-6 rounded-xl shadow-lg">
+                                <h3 class="text-lg font-semibold text-gray-800 mb-4">Details</h3>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <p><i class="fas fa-tint mr-2 text-blue-500"></i>Humidity: ${data.humidity}%</p>
+                                    <p><i class="fas fa-wind mr-2 text-gray-500"></i>Wind: ${data.wind} m/s</p>
+                                    <p><i class="fas fa-tachometer-alt mr-2 text-purple-500"></i>Pressure: ${data.pressure} hPa</p>
+                                    <p><i class="fas fa-sun mr-2 text-yellow-500"></i>Sunrise: ${data.sunrise}</p>
+                                    <p><i class="fas fa-moon mr-2 text-indigo-500"></i>Sunset: ${data.sunset}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.querySelector('.max-w-3xl').insertAdjacentHTML('beforeend', weatherHtml);
+                    setBackground(data.main, data.isDay);
+                }
+            } catch (err) {
+                spinner.style.display = 'none';
+                const errorHtml = `<div id="error" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg mb-6 animate-pulse">Failed to fetch weather data. Please try again.</div>`;
+                document.querySelector('.max-w-3xl').insertAdjacentHTML('beforeend', errorHtml);
+                setBackground(null, false);
+            }
+        });
+    </script>
+</body>
+</html>
